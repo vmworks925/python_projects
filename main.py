@@ -1,6 +1,7 @@
 from fastapi import FastAPI,HTTPException;
 from pydantic import BaseModel;
 from typing import List;
+from embedding_search import EmbeddingSearchService;
 
 class Item(BaseModel):
     name: str
@@ -8,11 +9,20 @@ class Item(BaseModel):
     price: float
     tax: float = None
 
-
+class QueryRequest(BaseModel):
+    query: str
+    top_k: int = 3
 
 app = FastAPI()
-
 items = []
+
+# Initialize the embedding search service (replace with your keys/index)
+embedding_service = EmbeddingSearchService(
+    cohere_api_key="Cj1OpLxjMTqbWew5VvgAPxMyk80OeZuLj5LCXoAG",
+    pinecone_api_key="pcsk_3ErmbN_Nw1raDwAD1ycbPq6RXBgrw8Xdnys4JKxce1AMVJYVcHce7fLe5M7iYbp8GTHDZj",
+    index_name="moglix-product-info"
+)
+
 
 
 @app.get("/")
@@ -34,4 +44,11 @@ def get_item(item_id: int):
         raise HTTPException(status_code=404, detail="Item not found")
     return items[item_id]
 
+@app.post("/search")
+def search_items(request: QueryRequest):
+    try:
+        results = embedding_service.search(request.query, top_k=request.top_k)
+        return {"matches": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
